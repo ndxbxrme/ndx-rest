@@ -75,25 +75,30 @@
         }
         selectFn = function(tableName) {
           return function(req, res, next) {
-            var items, where;
+            var where;
             if (ndx.permissions && !ndx.permissions.check('select', req.user)) {
               return next('Not permitted');
             }
             if (req.params && req.params.id) {
               where = {};
               where[ndx.settings.AUTO_ID] = req.params.id;
-              items = ndx.database.select(tableName, where);
-              if (items && items.length) {
-                return res.json(items[0]);
-              } else {
-                return res.end('Nothing found');
-              }
+              return ndx.database.select(tableName, {
+                where: where
+              }, function(items) {
+                if (items && items.length) {
+                  return res.json(items[0]);
+                } else {
+                  return res.end('Nothing found');
+                }
+              });
             } else {
-              return res.json({
-                total: ndx.database.count(tableName, req.body.where),
-                page: req.body.page || 1,
-                pageSize: req.body.pageSize || 0,
-                items: ndx.database.select(tableName, req.body.where, req.body.page, req.body.pageSize, req.body.sort, req.body.sortDir)
+              return ndx.database.select(tableName, req.body, function(items) {
+                return res.json({
+                  total: ndx.database.count(tableName, req.body.where),
+                  page: req.body.page || 1,
+                  pageSize: req.body.pageSize || 0,
+                  items: items
+                });
               });
             }
           };

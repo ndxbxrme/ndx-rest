@@ -51,17 +51,20 @@ module.exports = (ndx) ->
           if req.params and req.params.id
             where = {}
             where[ndx.settings.AUTO_ID] = req.params.id
-            items = ndx.database.select tableName, where
-            if items and items.length
-              res.json items[0]
-            else
-              res.end 'Nothing found'
+            ndx.database.select tableName, 
+              where: where
+            , (items) ->
+              if items and items.length
+                res.json items[0]
+              else
+                res.end 'Nothing found'
           else
-            res.json
-              total: ndx.database.count tableName, req.body.where
-              page: req.body.page or 1
-              pageSize: req.body.pageSize or 0
-              items: ndx.database.select tableName, req.body.where, req.body.page, req.body.pageSize, req.body.sort, req.body.sortDir
+            ndx.database.select tableName, req.body, (items) ->
+              res.json
+                total: ndx.database.count tableName, req.body.where
+                page: req.body.page or 1
+                pageSize: req.body.pageSize or 0
+                items: items
       upsertFn = (tableName) ->
         (req, res, next) ->
           op = if req.params.id then 'update' else 'insert'
