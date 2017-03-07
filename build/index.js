@@ -1,9 +1,51 @@
 (function() {
   'use strict';
+  var async;
+
+  async = require('async');
+
   module.exports = function(ndx) {
     ndx.rest = {};
     return setImmediate(function() {
-      var auth, deleteFn, i, len, ref, results, selectFn, table, tableName, type, upsertFn;
+      var auth, deleteFn, i, len, ref, restSockets, results, selectFn, table, tableName, type, upsertFn;
+      if (ndx.socket && ndx.database) {
+        restSockets = [];
+        ndx.socket.on('connection', function(socket) {
+          return socket.on('rest', function(data) {
+            socket.rest = true;
+            return restSockets.push(socket);
+          });
+        });
+        ndx.socket.on('disconnect', function(socket) {
+          if (socket.rest) {
+            return restSockets.splice(restSockets.indexOf(socket), 1);
+          }
+        });
+        ndx.database.on('update', function(args) {
+          return async.each(restSockets, function(restSocket, callback) {
+            restSocket.emit('update', {
+              table: args.table
+            });
+            return callback();
+          });
+        });
+        ndx.database.on('insert', function(args) {
+          return async.each(restSockets, function(restSocket, callback) {
+            restSocket.emit('insert', {
+              table: args.table
+            });
+            return callback();
+          });
+        });
+        ndx.database.on('delete', function(args) {
+          return async.each(restSockets, function(restSocket, callback) {
+            restSocket.emit('delete', {
+              table: args.table
+            });
+            return callback();
+          });
+        });
+      }
       ndx.app.get('/rest/endpoints', function(req, res, next) {
         var endpoint, endpoints, i, len;
         endpoints = ndx.rest.tables || ndx.settings.REST_TABLES || ndx.settings.TABLES;

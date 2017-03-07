@@ -1,8 +1,32 @@
 'use strict'
 
+async = require 'async'
+
 module.exports = (ndx) ->
   ndx.rest = {}
   setImmediate ->
+    if ndx.socket and ndx.database
+      restSockets = []
+      ndx.socket.on 'connection', (socket) ->
+        socket.on 'rest', (data) ->
+          socket.rest = true
+          restSockets.push socket
+      ndx.socket.on 'disconnect', (socket) ->
+        if socket.rest
+          restSockets.splice restSockets.indexOf(socket), 1
+      ndx.database.on 'update', (args) ->
+        async.each restSockets, (restSocket, callback) ->
+          restSocket.emit 'update', table:args.table
+          callback()
+      ndx.database.on 'insert', (args) ->
+        async.each restSockets, (restSocket, callback) ->
+          restSocket.emit 'insert', table:args.table
+          callback()
+      ndx.database.on 'delete', (args) ->
+        async.each restSockets, (restSocket, callback) ->
+          restSocket.emit 'delete', table:args.table
+          callback()
+    
     ndx.app.get '/rest/endpoints', (req, res, next) ->
       endpoints = ndx.rest.tables or ndx.settings.REST_TABLES or ndx.settings.TABLES
       if endpoints and endpoints.length and Object.prototype.toString.call(endpoints[0]) is '[object Array]'
