@@ -88,7 +88,7 @@
                 if (items && items.length) {
                   return res.json(items[0]);
                 } else {
-                  return res.end('Nothing found');
+                  return next('Nothing found');
                 }
               });
             } else {

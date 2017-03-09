@@ -57,7 +57,7 @@ module.exports = (ndx) ->
               if items and items.length
                 res.json items[0]
               else
-                res.end 'Nothing found'
+                next 'Nothing found'
           else
             ndx.database.select tableName, req.body, (items) ->
               res.json
