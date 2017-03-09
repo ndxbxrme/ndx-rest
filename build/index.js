@@ -76,7 +76,7 @@
         selectFn = function(tableName) {
           return function(req, res, next) {
             var where;
-            if (ndx.permissions && !ndx.permissions.check('select', req.user)) {
+            if (ndx.permissions && !ndx.permissions.check('select', ndx.user)) {
               return next('Not permitted');
             }
             if (req.params && req.params.id) {
@@ -107,7 +107,7 @@
           return function(req, res, next) {
             var op, where;
             op = req.params.id ? 'update' : 'insert';
-            if (ndx.permissions && !ndx.permissions.check(op, req.user)) {
+            if (ndx.permissions && !ndx.permissions.check(op, ndx.user)) {
               return next('Not permitted');
             }
             where = {};
@@ -120,7 +120,7 @@
         };
         deleteFn = function(tableName) {
           return function(req, res, next) {
-            if (ndx.permissions && !ndx.permissions.check('delete', req.user)) {
+            if (ndx.permissions && !ndx.permissions.check('delete', ndx.user)) {
               return next('Not permitted');
             }
             if (req.params.id) {

@@ -46,7 +46,7 @@ module.exports = (ndx) ->
         auth = table[1]
       selectFn = (tableName) ->
         (req, res, next) ->
-          if ndx.permissions and not ndx.permissions.check('select', req.user)
+          if ndx.permissions and not ndx.permissions.check('select', ndx.user)
             return next('Not permitted')
           if req.params and req.params.id
             where = {}
@@ -68,7 +68,7 @@ module.exports = (ndx) ->
       upsertFn = (tableName) ->
         (req, res, next) ->
           op = if req.params.id then 'update' else 'insert'
-          if ndx.permissions and not ndx.permissions.check(op, req.user)
+          if ndx.permissions and not ndx.permissions.check(op, ndx.user)
             return next('Not permitted')
           where = {}
           if req.params.id
@@ -77,7 +77,7 @@ module.exports = (ndx) ->
           res.end 'OK'
       deleteFn = (tableName) ->
         (req, res, next) ->
-          if ndx.permissions and not ndx.permissions.check('delete', req.user)
+          if ndx.permissions and not ndx.permissions.check('delete', ndx.user)
             return next('Not permitted')
           if req.params.id
             ndx.database.delete tableName, req.params.id
