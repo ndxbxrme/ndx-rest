@@ -5,6 +5,7 @@
   async = require('async');
 
   module.exports = function(ndx) {
+    ndx.settings.SOFT_DELETE = ndx.settings.SOFT_DELETE || process.env.SOFT_DELETE;
     ndx.rest = {};
     return setImmediate(function() {
       var auth, deleteFn, i, len, ref, restSockets, results, selectFn, table, tableName, type, upsertFn;
@@ -24,7 +25,8 @@
         ndx.database.on('update', function(args) {
           return async.each(restSockets, function(restSocket, callback) {
             restSocket.emit('update', {
-              table: args.table
+              table: args.table,
+              id: args.id
             });
             return callback();
           });
@@ -32,7 +34,8 @@
         ndx.database.on('insert', function(args) {
           return async.each(restSockets, function(restSocket, callback) {
             restSocket.emit('insert', {
-              table: args.table
+              table: args.table,
+              id: args.id
             });
             return callback();
           });
@@ -40,7 +43,8 @@
         ndx.database.on('delete', function(args) {
           return async.each(restSockets, function(restSocket, callback) {
             restSocket.emit('delete', {
-              table: args.table
+              table: args.table,
+              id: args.id
             });
             return callback();
           });
@@ -81,6 +85,9 @@
             }
             if (req.params && req.params.id) {
               where = {};
+              if (ndx.settings.SOFT_DELETE) {
+                where.deleted = null;
+              }
               where[ndx.settings.AUTO_ID] = req.params.id;
               return ndx.database.select(tableName, {
                 where: where
@@ -92,6 +99,10 @@
                 }
               });
             } else {
+              req.body.where = req.body.where || {};
+              if (ndx.settings.SOFT_DELETE) {
+                req.body.where.deleted = null;
+              }
               return ndx.database.select(tableName, req.body, function(items) {
                 return res.json({
                   total: ndx.database.count(tableName, req.body.where),
@@ -120,11 +131,20 @@
         };
         deleteFn = function(tableName) {
           return function(req, res, next) {
+            var where;
             if (ndx.permissions && !ndx.permissions.check('delete', ndx.user)) {
               return next('Not permitted');
             }
             if (req.params.id) {
-              ndx.database["delete"](tableName, req.params.id);
+              if (ndx.settings.SOFT_DELETE) {
+                where = {};
+                where[ndx.settings.AUTO_ID] = req.params.id;
+                ndx.database.update(tableName, {
+                  deleted: true
+                }, where);
+              } else {
+                ndx.database["delete"](tableName, req.params.id);
+              }
             }
             return res.end('OK');
           };

@@ -3,6 +3,7 @@
 async = require 'async'
 
 module.exports = (ndx) ->
+  ndx.settings.SOFT_DELETE = ndx.settings.SOFT_DELETE or process.env.SOFT_DELETE
   ndx.rest = {}
   setImmediate ->
     if ndx.socket and ndx.database
@@ -16,15 +17,21 @@ module.exports = (ndx) ->
           restSockets.splice restSockets.indexOf(socket), 1
       ndx.database.on 'update', (args) ->
         async.each restSockets, (restSocket, callback) ->
-          restSocket.emit 'update', table:args.table
+          restSocket.emit 'update', 
+            table: args.table
+            id: args.id
           callback()
       ndx.database.on 'insert', (args) ->
         async.each restSockets, (restSocket, callback) ->
-          restSocket.emit 'insert', table:args.table
+          restSocket.emit 'insert', 
+            table: args.table
+            id: args.id
           callback()
       ndx.database.on 'delete', (args) ->
         async.each restSockets, (restSocket, callback) ->
-          restSocket.emit 'delete', table:args.table
+          restSocket.emit 'delete', 
+            table: args.table
+            id: args.id
           callback()
     
     ndx.app.get '/rest/endpoints', (req, res, next) ->
@@ -50,6 +57,8 @@ module.exports = (ndx) ->
             return next('Not permitted')
           if req.params and req.params.id
             where = {}
+            if ndx.settings.SOFT_DELETE
+              where.deleted = null
             where[ndx.settings.AUTO_ID] = req.params.id
             ndx.database.select tableName, 
               where: where
@@ -59,6 +68,9 @@ module.exports = (ndx) ->
               else
                 next 'Nothing found'
           else
+            req.body.where = req.body.where or {}
+            if ndx.settings.SOFT_DELETE
+              req.body.where.deleted = null
             ndx.database.select tableName, req.body, (items) ->
               res.json
                 total: ndx.database.count tableName, req.body.where
@@ -80,7 +92,12 @@ module.exports = (ndx) ->
           if ndx.permissions and not ndx.permissions.check('delete', ndx.user)
             return next('Not permitted')
           if req.params.id
-            ndx.database.delete tableName, req.params.id
+            if ndx.settings.SOFT_DELETE
+              where = {}
+              where[ndx.settings.AUTO_ID] = req.params.id
+              ndx.database.update tableName, deleted:true, where
+            else
+              ndx.database.delete tableName, req.params.id
           res.end 'OK'
       ndx.app.get ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), selectFn(tableName)
       ndx.app.post "/api/#{tableName}/search", ndx.authenticate(auth), selectFn(tableName)
