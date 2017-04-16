@@ -15,24 +15,27 @@ module.exports = (ndx) ->
       ndx.socket.on 'disconnect', (socket) ->
         if socket.rest
           restSockets.splice restSockets.indexOf(socket), 1
-      ndx.database.on 'update', (args) ->
+      ndx.database.on 'update', (args, cb) ->
         async.each restSockets, (restSocket, callback) ->
           restSocket.emit 'update', 
             table: args.table
             id: args.id
           callback()
-      ndx.database.on 'insert', (args) ->
+        cb()
+      ndx.database.on 'insert', (args, cb) ->
         async.each restSockets, (restSocket, callback) ->
           restSocket.emit 'insert', 
             table: args.table
             id: args.id
           callback()
-      ndx.database.on 'delete', (args) ->
+        cb()
+      ndx.database.on 'delete', (args, cb) ->
         async.each restSockets, (restSocket, callback) ->
           restSocket.emit 'delete', 
             table: args.table
             id: args.id
           callback()
+        cb()
     
     ndx.app.get '/rest/endpoints', (req, res, next) ->
       endpoints = ndx.rest.tables or ndx.settings.REST_TABLES or ndx.settings.TABLES

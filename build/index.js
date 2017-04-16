@@ -22,32 +22,35 @@
             return restSockets.splice(restSockets.indexOf(socket), 1);
           }
         });
-        ndx.database.on('update', function(args) {
-          return async.each(restSockets, function(restSocket, callback) {
+        ndx.database.on('update', function(args, cb) {
+          async.each(restSockets, function(restSocket, callback) {
             restSocket.emit('update', {
               table: args.table,
               id: args.id
             });
             return callback();
           });
+          return cb();
         });
-        ndx.database.on('insert', function(args) {
-          return async.each(restSockets, function(restSocket, callback) {
+        ndx.database.on('insert', function(args, cb) {
+          async.each(restSockets, function(restSocket, callback) {
             restSocket.emit('insert', {
               table: args.table,
               id: args.id
             });
             return callback();
           });
+          return cb();
         });
-        ndx.database.on('delete', function(args) {
-          return async.each(restSockets, function(restSocket, callback) {
+        ndx.database.on('delete', function(args, cb) {
+          async.each(restSockets, function(restSocket, callback) {
             restSocket.emit('delete', {
               table: args.table,
               id: args.id
             });
             return callback();
           });
+          return cb();
         });
       }
       ndx.app.get('/rest/endpoints', function(req, res, next) {
