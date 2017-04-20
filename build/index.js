@@ -106,9 +106,9 @@
               if (ndx.settings.SOFT_DELETE) {
                 req.body.where.deleted = null;
               }
-              return ndx.database.select(tableName, req.body, function(items) {
+              return ndx.database.select(tableName, req.body, function(items, total) {
                 return res.json({
-                  total: ndx.database.count(tableName, req.body.where),
+                  total: total,
                   page: req.body.page || 1,
                   pageSize: req.body.pageSize || 0,
                   items: items
@@ -139,14 +139,14 @@
               return next('Not permitted');
             }
             if (req.params.id) {
+              where = {};
+              where[ndx.settings.AUTO_ID] = req.params.id;
               if (ndx.settings.SOFT_DELETE) {
-                where = {};
-                where[ndx.settings.AUTO_ID] = req.params.id;
                 ndx.database.update(tableName, {
                   deleted: true
                 }, where);
               } else {
-                ndx.database["delete"](tableName, req.params.id);
+                ndx.database["delete"](tableName, where);
               }
             }
             return res.end('OK');

@@ -74,9 +74,9 @@ module.exports = (ndx) ->
             req.body.where = req.body.where or {}
             if ndx.settings.SOFT_DELETE
               req.body.where.deleted = null
-            ndx.database.select tableName, req.body, (items) ->
+            ndx.database.select tableName, req.body, (items, total) ->
               res.json
-                total: ndx.database.count tableName, req.body.where
+                total: total
                 page: req.body.page or 1
                 pageSize: req.body.pageSize or 0
                 items: items
@@ -95,12 +95,12 @@ module.exports = (ndx) ->
           if ndx.permissions and not ndx.permissions.check('delete', ndx.user)
             return next('Not permitted')
           if req.params.id
+            where = {}
+            where[ndx.settings.AUTO_ID] = req.params.id
             if ndx.settings.SOFT_DELETE
-              where = {}
-              where[ndx.settings.AUTO_ID] = req.params.id
               ndx.database.update tableName, deleted:true, where
             else
-              ndx.database.delete tableName, req.params.id
+              ndx.database.delete tableName, where
           res.end 'OK'
       ndx.app.get ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), selectFn(tableName)
       ndx.app.post "/api/#{tableName}/search", ndx.authenticate(auth), selectFn(tableName)
