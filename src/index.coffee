@@ -6,6 +6,7 @@ module.exports = (ndx) ->
   ndx.settings.SOFT_DELETE = ndx.settings.SOFT_DELETE or process.env.SOFT_DELETE
   ndx.rest = {}
   setImmediate ->
+    endpoints = ndx.rest.tables or ndx.settings.REST_TABLES or ndx.settings.TABLES
     if ndx.socket and ndx.database
       restSockets = []
       ndx.socket.on 'connection', (socket) ->
@@ -16,29 +17,31 @@ module.exports = (ndx) ->
         if socket.rest
           restSockets.splice restSockets.indexOf(socket), 1
       ndx.database.on 'update', (args, cb) ->
-        async.each restSockets, (restSocket, callback) ->
-          restSocket.emit 'update', 
-            table: args.table
-            id: args.id
-          callback()
-        cb()
+        if endpoints.indexOf(args.table) isnt -1
+          async.each restSockets, (restSocket, callback) ->
+            restSocket.emit 'update', 
+              table: args.table
+              id: args.id
+            callback()
+          cb()
       ndx.database.on 'insert', (args, cb) ->
-        async.each restSockets, (restSocket, callback) ->
-          restSocket.emit 'insert', 
-            table: args.table
-            id: args.id
-          callback()
-        cb()
+        if endpoints.indexOf(args.table) isnt -1
+          async.each restSockets, (restSocket, callback) ->
+            restSocket.emit 'insert', 
+              table: args.table
+              id: args.id
+            callback()
+          cb()
       ndx.database.on 'delete', (args, cb) ->
-        async.each restSockets, (restSocket, callback) ->
-          restSocket.emit 'delete', 
-            table: args.table
-            id: args.id
-          callback()
-        cb()
+        if endpoints.indexOf(args.table) isnt -1
+          async.each restSockets, (restSocket, callback) ->
+            restSocket.emit 'delete', 
+              table: args.table
+              id: args.id
+            callback()
+          cb()
     
     ndx.app.get '/rest/endpoints', (req, res, next) ->
-      endpoints = ndx.rest.tables or ndx.settings.REST_TABLES or ndx.settings.TABLES
       if endpoints and endpoints.length and Object.prototype.toString.call(endpoints[0]) is '[object Array]'
         for endpoint in endpoints
           endpoint = endpoint[0]
