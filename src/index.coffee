@@ -16,16 +16,19 @@ module.exports = (ndx) ->
     insert: []
     delete: []
   asyncCallback = (name, obj, cb) ->
-    truth = true
+    truth = false
     if callbacks[name] and callbacks[name].length
       async.eachSeries callbacks[name], (cbitem, callback) ->
-        cbitem obj, (result) ->
-          truth = truth and result
+        if not truth
+          cbitem obj, (result) ->
+            truth = truth and result
+            callback()
+        else
           callback()
       , ->
         cb? truth
     else
-      cb? truth
+      cb? true
   setImmediate ->
     endpoints = ndx.rest.tables or ndx.settings.REST_TABLES or ndx.settings.TABLES
     if ndx.socket and ndx.database
