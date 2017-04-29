@@ -21,7 +21,7 @@ module.exports = (ndx) ->
       async.eachSeries callbacks[name], (cbitem, callback) ->
         if not truth
           cbitem obj, (result) ->
-            truth = truth and result
+            truth = truth or result
             callback()
         else
           callback()
