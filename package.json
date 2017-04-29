@@ -1,11 +1,12 @@
 {
   "name": "ndx-rest",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "rest endpoints for ndx-framework apps",
   "main": "build/index.js",
   "scripts": {
     "test": "node build/test.js"
   },
+  "loadOrder": 1,
   "repository": {
     "type": "git",
     "url": "https://github.com/ndxbxrme/ndx-rest"

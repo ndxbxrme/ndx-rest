@@ -4,13 +4,35 @@ async = require 'async'
 
 module.exports = (ndx) ->
   ndx.settings.SOFT_DELETE = ndx.settings.SOFT_DELETE or process.env.SOFT_DELETE
-  ndx.rest = {}
+  ndx.rest =
+    on: (name, callback) ->
+      callbacks[name].push callback
+      @
+    off: (name, callback) ->
+      callbacks[name].splice callbacks[name].indexOf(callback), 1
+      @
+  callbacks =
+    update: []
+    insert: []
+    delete: []
+  asyncCallback = (name, obj, cb) ->
+    truth = true
+    if callbacks[name] and callbacks[name].length
+      async.eachSeries callbacks[name], (cbitem, callback) ->
+        cbitem obj, (result) ->
+          truth = truth and result
+          callback()
+      , ->
+        cb? truth
+    else
+      cb? truth
   setImmediate ->
     endpoints = ndx.rest.tables or ndx.settings.REST_TABLES or ndx.settings.TABLES
     if ndx.socket and ndx.database
       restSockets = []
       ndx.socket.on 'connection', (socket) ->
         socket.on 'rest', (data) ->
+          socket.user = ndx.user
           socket.rest = true
           restSockets.push socket
       ndx.socket.on 'disconnect', (socket) ->
@@ -19,26 +41,44 @@ module.exports = (ndx) ->
       ndx.database.on 'update', (args, cb) ->
         if endpoints.indexOf(args.table) isnt -1
           async.each restSockets, (restSocket, callback) ->
-            restSocket.emit 'update', 
-              table: args.table
-              id: args.id
-            callback()
+            asyncCallback 'update',
+              args: args
+              user: restSocket.user
+            , (result) ->
+              if not result
+                return callback()
+              restSocket.emit 'update', 
+                table: args.table
+                id: args.id
+              callback()
           cb()
       ndx.database.on 'insert', (args, cb) ->
         if endpoints.indexOf(args.table) isnt -1
           async.each restSockets, (restSocket, callback) ->
-            restSocket.emit 'insert', 
-              table: args.table
-              id: args.id
-            callback()
+            asyncCallback 'insert',
+              args: args
+              user: restSocket.user
+            , (result) ->
+              if not result
+                return callback()
+              restSocket.emit 'insert', 
+                table: args.table
+                id: args.id
+              callback()
           cb()
       ndx.database.on 'delete', (args, cb) ->
         if endpoints.indexOf(args.table) isnt -1
           async.each restSockets, (restSocket, callback) ->
-            restSocket.emit 'delete', 
-              table: args.table
-              id: args.id
-            callback()
+            asyncCallback 'delete',
+              args: args
+              user: restSocket.user
+            , (result) ->
+              if not result
+                return callback()
+              restSocket.emit 'delete', 
+                table: args.table
+                id: args.id
+              callback()
           cb()
     
     ndx.app.get '/rest/endpoints', (req, res, next) ->

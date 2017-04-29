@@ -5,8 +5,39 @@
   async = require('async');
 
   module.exports = function(ndx) {
+    var asyncCallback, callbacks;
     ndx.settings.SOFT_DELETE = ndx.settings.SOFT_DELETE || process.env.SOFT_DELETE;
-    ndx.rest = {};
+    ndx.rest = {
+      on: function(name, callback) {
+        callbacks[name].push(callback);
+        return this;
+      },
+      off: function(name, callback) {
+        callbacks[name].splice(callbacks[name].indexOf(callback), 1);
+        return this;
+      }
+    };
+    callbacks = {
+      update: [],
+      insert: [],
+      "delete": []
+    };
+    asyncCallback = function(name, obj, cb) {
+      var truth;
+      truth = true;
+      if (callbacks[name] && callbacks[name].length) {
+        return async.eachSeries(callbacks[name], function(cbitem, callback) {
+          return cbitem(obj, function(result) {
+            truth = truth && result;
+            return callback();
+          });
+        }, function() {
+          return typeof cb === "function" ? cb(truth) : void 0;
+        });
+      } else {
+        return typeof cb === "function" ? cb(truth) : void 0;
+      }
+    };
     return setImmediate(function() {
       var auth, deleteFn, endpoints, i, len, ref, restSockets, results, selectFn, table, tableName, type, upsertFn;
       endpoints = ndx.rest.tables || ndx.settings.REST_TABLES || ndx.settings.TABLES;
@@ -14,6 +45,7 @@
         restSockets = [];
         ndx.socket.on('connection', function(socket) {
           return socket.on('rest', function(data) {
+            socket.user = ndx.user;
             socket.rest = true;
             return restSockets.push(socket);
           });
@@ -26,11 +58,19 @@
         ndx.database.on('update', function(args, cb) {
           if (endpoints.indexOf(args.table) !== -1) {
             async.each(restSockets, function(restSocket, callback) {
-              restSocket.emit('update', {
-                table: args.table,
-                id: args.id
+              return asyncCallback('update', {
+                args: args,
+                user: restSocket.user
+              }, function(result) {
+                if (!result) {
+                  return callback();
+                }
+                restSocket.emit('update', {
+                  table: args.table,
+                  id: args.id
+                });
+                return callback();
               });
-              return callback();
             });
             return cb();
           }
@@ -38,11 +78,19 @@
         ndx.database.on('insert', function(args, cb) {
           if (endpoints.indexOf(args.table) !== -1) {
             async.each(restSockets, function(restSocket, callback) {
-              restSocket.emit('insert', {
-                table: args.table,
-                id: args.id
+              return asyncCallback('insert', {
+                args: args,
+                user: restSocket.user
+              }, function(result) {
+                if (!result) {
+                  return callback();
+                }
+                restSocket.emit('insert', {
+                  table: args.table,
+                  id: args.id
+                });
+                return callback();
               });
-              return callback();
             });
             return cb();
           }
@@ -50,11 +98,19 @@
         ndx.database.on('delete', function(args, cb) {
           if (endpoints.indexOf(args.table) !== -1) {
             async.each(restSockets, function(restSocket, callback) {
-              restSocket.emit('delete', {
-                table: args.table,
-                id: args.id
+              return asyncCallback('delete', {
+                args: args,
+                user: restSocket.user
+              }, function(result) {
+                if (!result) {
+                  return callback();
+                }
+                restSocket.emit('delete', {
+                  table: args.table,
+                  id: args.id
+                });
+                return callback();
               });
-              return callback();
             });
             return cb();
           }
