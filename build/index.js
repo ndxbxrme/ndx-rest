@@ -154,10 +154,14 @@
             }
             if (req.params && req.params.id) {
               where = {};
+              if (req.params.id.indexOf('%7B') === 0) {
+                where = JSON.parse(unescape(req.params.id));
+              } else {
+                where[ndx.settings.AUTO_ID] = req.params.id;
+              }
               if (ndx.settings.SOFT_DELETE) {
                 where.deleted = null;
               }
-              where[ndx.settings.AUTO_ID] = req.params.id;
               return ndx.database.select(tableName, {
                 where: where
               }, function(items) {

@@ -106,9 +106,12 @@ module.exports = (ndx) ->
             return next('Not permitted')
           if req.params and req.params.id
             where = {}
+            if req.params.id.indexOf('%7B') is 0
+              where = JSON.parse unescape req.params.id
+            else
+              where[ndx.settings.AUTO_ID] = req.params.id
             if ndx.settings.SOFT_DELETE
               where.deleted = null
-            where[ndx.settings.AUTO_ID] = req.params.id
             ndx.database.select tableName, 
               where: where
             , (items) ->
