@@ -154,8 +154,8 @@
             }
             if (req.params && req.params.id) {
               where = {};
-              if (req.params.id.indexOf('%7B') === 0) {
-                where = JSON.parse(unescape(req.params.id));
+              if (req.params.id.indexOf('{') === 0) {
+                where = JSON.parse(req.params.id);
               } else {
                 where[ndx.settings.AUTO_ID] = req.params.id;
               }
