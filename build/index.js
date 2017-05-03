@@ -48,10 +48,12 @@
       if (ndx.socket && ndx.database) {
         restSockets = [];
         ndx.socket.on('connection', function(socket) {
-          return socket.on('rest', function(data) {
-            socket.user = ndx.user;
+          socket.on('rest', function(data) {
             socket.rest = true;
             return restSockets.push(socket);
+          });
+          return socket.on('user', function(data) {
+            return socket.user = data;
           });
         });
         ndx.socket.on('disconnect', function(socket) {
@@ -62,10 +64,8 @@
         ndx.database.on('update', function(args, cb) {
           if (endpoints.indexOf(args.table) !== -1) {
             async.each(restSockets, function(restSocket, callback) {
-              return asyncCallback('update', {
-                args: args,
-                user: restSocket.user
-              }, function(result) {
+              args.user = restSocket.user;
+              return asyncCallback('update', args, function(result) {
                 if (!result) {
                   return callback();
                 }
@@ -82,10 +82,8 @@
         ndx.database.on('insert', function(args, cb) {
           if (endpoints.indexOf(args.table) !== -1) {
             async.each(restSockets, function(restSocket, callback) {
-              return asyncCallback('insert', {
-                args: args,
-                user: restSocket.user
-              }, function(result) {
+              args.user = restSocket.user;
+              return asyncCallback('insert', args, function(result) {
                 if (!result) {
                   return callback();
                 }
@@ -102,10 +100,8 @@
         ndx.database.on('delete', function(args, cb) {
           if (endpoints.indexOf(args.table) !== -1) {
             async.each(restSockets, function(restSocket, callback) {
-              return asyncCallback('delete', {
-                args: args,
-                user: restSocket.user
-              }, function(result) {
+              args.user = restSocket.user;
+              return asyncCallback('delete', args, function(result) {
                 if (!result) {
                   return callback();
                 }

@@ -35,18 +35,18 @@ module.exports = (ndx) ->
       restSockets = []
       ndx.socket.on 'connection', (socket) ->
         socket.on 'rest', (data) ->
-          socket.user = ndx.user
           socket.rest = true
           restSockets.push socket
+        socket.on 'user', (data) ->
+          socket.user = data
       ndx.socket.on 'disconnect', (socket) ->
         if socket.rest
           restSockets.splice restSockets.indexOf(socket), 1
       ndx.database.on 'update', (args, cb) ->
         if endpoints.indexOf(args.table) isnt -1
           async.each restSockets, (restSocket, callback) ->
-            asyncCallback 'update',
-              args: args
-              user: restSocket.user
+            args.user = restSocket.user
+            asyncCallback 'update', args
             , (result) ->
               if not result
                 return callback()
@@ -58,9 +58,8 @@ module.exports = (ndx) ->
       ndx.database.on 'insert', (args, cb) ->
         if endpoints.indexOf(args.table) isnt -1
           async.each restSockets, (restSocket, callback) ->
-            asyncCallback 'insert',
-              args: args
-              user: restSocket.user
+            args.user = restSocket.user
+            asyncCallback 'insert', args
             , (result) ->
               if not result
                 return callback()
@@ -72,9 +71,8 @@ module.exports = (ndx) ->
       ndx.database.on 'delete', (args, cb) ->
         if endpoints.indexOf(args.table) isnt -1
           async.each restSockets, (restSocket, callback) ->
-            asyncCallback 'delete',
-              args: args
-              user: restSocket.user
+            args.user = restSocket.user
+            asyncCallback 'delete', args
             , (result) ->
               if not result
                 return callback()
