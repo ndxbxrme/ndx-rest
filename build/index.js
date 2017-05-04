@@ -145,9 +145,6 @@
         selectFn = function(tableName) {
           return function(req, res, next) {
             var where;
-            if (ndx.permissions && !ndx.permissions.check('select', ndx.user)) {
-              return next('Not permitted');
-            }
             if (req.params && req.params.id) {
               where = {};
               if (req.params.id.indexOf('{') === 0) {
@@ -164,7 +161,7 @@
                 if (items && items.length) {
                   return res.json(items[0]);
                 } else {
-                  return next('Nothing found');
+                  return res.json({});
                 }
               });
             } else {

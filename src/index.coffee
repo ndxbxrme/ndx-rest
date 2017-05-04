@@ -100,8 +100,6 @@ module.exports = (ndx) ->
         auth = table[1]
       selectFn = (tableName) ->
         (req, res, next) ->
-          if ndx.permissions and not ndx.permissions.check('select', ndx.user)
-            return next('Not permitted')
           if req.params and req.params.id
             where = {}
             if req.params.id.indexOf('{') is 0
@@ -116,7 +114,7 @@ module.exports = (ndx) ->
               if items and items.length
                 res.json items[0]
               else
-                next 'Nothing found'
+                res.json {}
           else
             req.body.where = req.body.where or {}
             if ndx.settings.SOFT_DELETE
