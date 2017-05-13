@@ -35,8 +35,9 @@ module.exports = (ndx) ->
       restSockets = []
       ndx.socket.on 'connection', (socket) ->
         socket.on 'rest', (data) ->
-          socket.rest = true
-          restSockets.push socket
+          if restSockets.indexOf(socket) is -1
+            socket.rest = true
+            restSockets.push socket
         socket.on 'user', (data) ->
           socket.user = data
       ndx.socket.on 'disconnect', (socket) ->
@@ -128,8 +129,6 @@ module.exports = (ndx) ->
       upsertFn = (tableName) ->
         (req, res, next) ->
           op = if req.params.id then 'update' else 'insert'
-          if ndx.permissions and not ndx.permissions.check(op, ndx.user)
-            return next('Not permitted')
           where = {}
           if req.params.id
             where[ndx.settings.AUTO_ID] = req.params.id
@@ -137,8 +136,6 @@ module.exports = (ndx) ->
           res.end 'OK'
       deleteFn = (tableName) ->
         (req, res, next) ->
-          if ndx.permissions and not ndx.permissions.check('delete', ndx.user)
-            return next('Not permitted')
           if req.params.id
             where = {}
             where[ndx.settings.AUTO_ID] = req.params.id

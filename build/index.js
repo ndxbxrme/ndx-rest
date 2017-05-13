@@ -49,8 +49,10 @@
         restSockets = [];
         ndx.socket.on('connection', function(socket) {
           socket.on('rest', function(data) {
-            socket.rest = true;
-            return restSockets.push(socket);
+            if (restSockets.indexOf(socket) === -1) {
+              socket.rest = true;
+              return restSockets.push(socket);
+            }
           });
           return socket.on('user', function(data) {
             return socket.user = data;
@@ -184,9 +186,6 @@
           return function(req, res, next) {
             var op, where;
             op = req.params.id ? 'update' : 'insert';
-            if (ndx.permissions && !ndx.permissions.check(op, ndx.user)) {
-              return next('Not permitted');
-            }
             where = {};
             if (req.params.id) {
               where[ndx.settings.AUTO_ID] = req.params.id;
@@ -198,9 +197,6 @@
         deleteFn = function(tableName) {
           return function(req, res, next) {
             var where;
-            if (ndx.permissions && !ndx.permissions.check('delete', ndx.user)) {
-              return next('Not permitted');
-            }
             if (req.params.id) {
               where = {};
               where[ndx.settings.AUTO_ID] = req.params.id;
