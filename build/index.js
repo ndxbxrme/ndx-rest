@@ -55,7 +55,8 @@
             }
           });
           return socket.on('user', function(data) {
-            return socket.user = data;
+            socket.user = data;
+            return ndx.auth && ndx.auth.extendUser(socket.user);
           });
         });
         ndx.socket.on('disconnect', function(socket) {

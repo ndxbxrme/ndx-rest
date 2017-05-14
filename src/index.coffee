@@ -40,6 +40,7 @@ module.exports = (ndx) ->
             restSockets.push socket
         socket.on 'user', (data) ->
           socket.user = data
+          ndx.auth and ndx.auth.extendUser socket.user
       ndx.socket.on 'disconnect', (socket) ->
         if socket.rest
           restSockets.splice restSockets.indexOf(socket), 1
