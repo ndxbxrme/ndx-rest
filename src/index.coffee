@@ -133,15 +133,19 @@ module.exports = (ndx) ->
           where = {}
           if req.params.id
             where[ndx.settings.AUTO_ID] = req.params.id
-          ndx.database.upsert tableName, req.body, where
-          res.end 'OK'
+          ndx.database.upsert tableName, req.body, where, (err, r) ->
+            res.json(err or r)
       deleteFn = (tableName) ->
         (req, res, next) ->
           if req.params.id
             where = {}
             where[ndx.settings.AUTO_ID] = req.params.id
             if ndx.settings.SOFT_DELETE
-              ndx.database.update tableName, deleted:true, where
+              ndx.database.update tableName, 
+                deleted:
+                  by:ndx.user[ndx.settings.AUTO_ID]
+                  at:new Date().valueOf()
+              , where
             else
               ndx.database.delete tableName, where
           res.end 'OK'

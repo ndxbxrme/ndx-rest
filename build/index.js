@@ -191,8 +191,9 @@
             if (req.params.id) {
               where[ndx.settings.AUTO_ID] = req.params.id;
             }
-            ndx.database.upsert(tableName, req.body, where);
-            return res.end('OK');
+            return ndx.database.upsert(tableName, req.body, where, function(err, r) {
+              return res.json(err || r);
+            });
           };
         };
         deleteFn = function(tableName) {
@@ -203,7 +204,10 @@
               where[ndx.settings.AUTO_ID] = req.params.id;
               if (ndx.settings.SOFT_DELETE) {
                 ndx.database.update(tableName, {
-                  deleted: true
+                  deleted: {
+                    by: ndx.user[ndx.settings.AUTO_ID],
+                    at: new Date().valueOf()
+                  }
                 }, where);
               } else {
                 ndx.database["delete"](tableName, where);
