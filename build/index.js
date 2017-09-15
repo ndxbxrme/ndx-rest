@@ -169,7 +169,7 @@
               });
             } else {
               req.body.where = req.body.where || {};
-              if (ndx.settings.SOFT_DELETE) {
+              if (ndx.settings.SOFT_DELETE && !req.body.where.deleted) {
                 req.body.where.deleted = null;
               }
               return ndx.database.select(tableName, req.body, function(items, total) {
@@ -186,6 +186,7 @@
         upsertFn = function(tableName) {
           return function(req, res, next) {
             var op, where;
+            console.log('upsert', req.params.id);
             op = req.params.id ? 'update' : 'insert';
             where = {};
             if (req.params.id) {
