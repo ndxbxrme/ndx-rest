@@ -1,6 +1,6 @@
 {
   "name": "ndx-rest",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "rest endpoints for ndx-framework apps",
   "main": "build/index.js",
   "scripts": {

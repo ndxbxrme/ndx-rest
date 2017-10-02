@@ -186,7 +186,6 @@
         upsertFn = function(tableName) {
           return function(req, res, next) {
             var op, where;
-            console.log('upsert', req.params.id);
             op = req.params.id ? 'update' : 'insert';
             where = {};
             if (req.params.id) {

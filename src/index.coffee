@@ -129,7 +129,6 @@ module.exports = (ndx) ->
                 items: items
       upsertFn = (tableName) ->
         (req, res, next) ->
-          console.log 'upsert', req.params.id
           op = if req.params.id then 'update' else 'insert'
           where = {}
           if req.params.id
