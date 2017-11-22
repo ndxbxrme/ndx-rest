@@ -149,11 +149,13 @@ module.exports = (ndx) ->
             else
               ndx.database.delete tableName, where
           res.end 'OK'
-      ndx.app.get ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), selectFn(tableName)
-      ndx.app.post "/api/#{tableName}/search", ndx.authenticate(auth), selectFn(tableName)
-      ndx.app.post ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), upsertFn(tableName)
-      ndx.app.put ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), upsertFn(tableName)
-      ndx.app.delete "/api/#{tableName}/:id", ndx.authenticate(auth), deleteFn(tableName)
+      makeRoutes = (tableName, auth) ->
+        ndx.app.get ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), selectFn(tableName)
+        ndx.app.post "/api/#{tableName}/search", ndx.authenticate(auth), selectFn(tableName)
+        ndx.app.post ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), upsertFn(tableName)
+        ndx.app.put ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), upsertFn(tableName)
+        ndx.app.delete "/api/#{tableName}/:id", ndx.authenticate(auth), deleteFn(tableName)
+      makeRoutes tableName, auth
         
       
         

@@ -43,7 +43,7 @@
       }
     };
     return setImmediate(function() {
-      var auth, deleteFn, endpoints, i, len, ref, restSockets, results, selectFn, table, tableName, type, upsertFn;
+      var auth, deleteFn, endpoints, i, len, makeRoutes, ref, restSockets, results, selectFn, table, tableName, type, upsertFn;
       endpoints = ndx.rest.tables || ndx.settings.REST_TABLES || ndx.settings.TABLES;
       if (ndx.socket && ndx.database) {
         restSockets = [];
@@ -216,11 +216,14 @@
             return res.end('OK');
           };
         };
-        ndx.app.get(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), selectFn(tableName));
-        ndx.app.post("/api/" + tableName + "/search", ndx.authenticate(auth), selectFn(tableName));
-        ndx.app.post(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), upsertFn(tableName));
-        ndx.app.put(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), upsertFn(tableName));
-        results.push(ndx.app["delete"]("/api/" + tableName + "/:id", ndx.authenticate(auth), deleteFn(tableName)));
+        makeRoutes = function(tableName, auth) {
+          ndx.app.get(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), selectFn(tableName));
+          ndx.app.post("/api/" + tableName + "/search", ndx.authenticate(auth), selectFn(tableName));
+          ndx.app.post(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), upsertFn(tableName));
+          ndx.app.put(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), upsertFn(tableName));
+          return ndx.app["delete"]("/api/" + tableName + "/:id", ndx.authenticate(auth), deleteFn(tableName));
+        };
+        results.push(makeRoutes(tableName, auth));
       }
       return results;
     });
