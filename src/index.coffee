@@ -4,6 +4,16 @@ async = require 'async'
 
 module.exports = (ndx) ->
   ndx.settings.SOFT_DELETE = ndx.settings.SOFT_DELETE or process.env.SOFT_DELETE
+  hasDeleted = (obj) ->
+    truth = false
+    if typeof(obj) is 'object'
+      for key of obj
+        if key is 'deleted'
+          return true
+        else
+          if truth = hasDeleted obj[key]
+            return true
+    truth
   ndx.rest =
     on: (name, callback) ->
       callbacks[name].push callback
@@ -100,7 +110,7 @@ module.exports = (ndx) ->
       else if type is '[object Array]'
         tableName = table[0]
         auth = table[1]
-      selectFn = (tableName) ->
+      selectFn = (tableName, all) ->
         (req, res, next) ->
           if req.params and req.params.id
             where = {}
@@ -108,7 +118,7 @@ module.exports = (ndx) ->
               where = JSON.parse req.params.id
             else
               where[ndx.settings.AUTO_ID] = req.params.id
-            if ndx.settings.SOFT_DELETE
+            if ndx.settings.SOFT_DELETE and not hasDeleted(where)
               where.deleted = null
             ndx.database.select tableName, 
               where: where
@@ -119,7 +129,7 @@ module.exports = (ndx) ->
                 res.json {}
           else
             req.body.where = req.body.where or {}
-            if ndx.settings.SOFT_DELETE and not req.body.where.deleted
+            if ndx.settings.SOFT_DELETE and not hasDeleted(req.body.where)
               req.body.where.deleted = null
             ndx.database.select tableName, req.body, (items, total) ->
               res.json
@@ -151,6 +161,7 @@ module.exports = (ndx) ->
           res.end 'OK'
       makeRoutes = (tableName, auth) ->
         ndx.app.get ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), selectFn(tableName)
+        ndx.app.get "/api/#{tableName}/:id/all", ndx.authenticate(auth), selectFn(tableName, true)
         ndx.app.post "/api/#{tableName}/search", ndx.authenticate(auth), selectFn(tableName)
         ndx.app.post ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), upsertFn(tableName)
         ndx.app.put ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), upsertFn(tableName)

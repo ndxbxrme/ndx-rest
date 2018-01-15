@@ -5,8 +5,24 @@
   async = require('async');
 
   module.exports = function(ndx) {
-    var asyncCallback, callbacks;
+    var asyncCallback, callbacks, hasDeleted;
     ndx.settings.SOFT_DELETE = ndx.settings.SOFT_DELETE || process.env.SOFT_DELETE;
+    hasDeleted = function(obj) {
+      var key, truth;
+      truth = false;
+      if (typeof obj === 'object') {
+        for (key in obj) {
+          if (key === 'deleted') {
+            return true;
+          } else {
+            if (truth = hasDeleted(obj[key])) {
+              return true;
+            }
+          }
+        }
+      }
+      return truth;
+    };
     ndx.rest = {
       on: function(name, callback) {
         callbacks[name].push(callback);
@@ -145,7 +161,7 @@
           tableName = table[0];
           auth = table[1];
         }
-        selectFn = function(tableName) {
+        selectFn = function(tableName, all) {
           return function(req, res, next) {
             var where;
             if (req.params && req.params.id) {
@@ -155,7 +171,7 @@
               } else {
                 where[ndx.settings.AUTO_ID] = req.params.id;
               }
-              if (ndx.settings.SOFT_DELETE) {
+              if (ndx.settings.SOFT_DELETE && !hasDeleted(where)) {
                 where.deleted = null;
               }
               return ndx.database.select(tableName, {
@@ -169,7 +185,7 @@
               });
             } else {
               req.body.where = req.body.where || {};
-              if (ndx.settings.SOFT_DELETE && !req.body.where.deleted) {
+              if (ndx.settings.SOFT_DELETE && !hasDeleted(req.body.where)) {
                 req.body.where.deleted = null;
               }
               return ndx.database.select(tableName, req.body, function(items, total) {
@@ -218,6 +234,7 @@
         };
         makeRoutes = function(tableName, auth) {
           ndx.app.get(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), selectFn(tableName));
+          ndx.app.get("/api/" + tableName + "/:id/all", ndx.authenticate(auth), selectFn(tableName, true));
           ndx.app.post("/api/" + tableName + "/search", ndx.authenticate(auth), selectFn(tableName));
           ndx.app.post(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), upsertFn(tableName));
           ndx.app.put(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), upsertFn(tableName));
