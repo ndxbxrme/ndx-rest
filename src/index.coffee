@@ -120,6 +120,11 @@ module.exports = (ndx) ->
               where[ndx.settings.AUTO_ID] = req.params.id
             if ndx.settings.SOFT_DELETE and not hasDeleted(where)
               where.deleted = null
+            if all
+              ndx.user.type = 'system'
+              ndx.user.role = 'system'
+              ndx.user.roles =
+                system: true
             ndx.database.select tableName, 
               where: where
             , (items) ->

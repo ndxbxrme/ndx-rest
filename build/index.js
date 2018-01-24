@@ -174,6 +174,13 @@
               if (ndx.settings.SOFT_DELETE && !hasDeleted(where)) {
                 where.deleted = null;
               }
+              if (all) {
+                ndx.user.type = 'system';
+                ndx.user.role = 'system';
+                ndx.user.roles = {
+                  system: true
+                };
+              }
               return ndx.database.select(tableName, {
                 where: where
               }, function(items) {
