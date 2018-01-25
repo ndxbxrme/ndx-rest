@@ -5,7 +5,7 @@
   async = require('async');
 
   module.exports = function(ndx) {
-    var asyncCallback, callbacks, hasDeleted;
+    var asyncCallback, callbacks, elevateUser, hasDeleted;
     ndx.settings.SOFT_DELETE = ndx.settings.SOFT_DELETE || process.env.SOFT_DELETE;
     hasDeleted = function(obj) {
       var key, truth;
@@ -22,6 +22,13 @@
         }
       }
       return truth;
+    };
+    elevateUser = function(user) {
+      user.type = 'system';
+      user.role = 'system';
+      return user.roles = {
+        system: true
+      };
     };
     ndx.rest = {
       on: function(name, callback) {
@@ -175,11 +182,7 @@
                 where.deleted = null;
               }
               if (all) {
-                ndx.user.type = 'system';
-                ndx.user.role = 'system';
-                ndx.user.roles = {
-                  system: true
-                };
+                elevateUser(ndx.user);
               }
               return ndx.database.select(tableName, {
                 where: where
@@ -194,6 +197,9 @@
               req.body.where = req.body.where || {};
               if (ndx.settings.SOFT_DELETE && !hasDeleted(req.body.where)) {
                 req.body.where.deleted = null;
+              }
+              if (req.body.all || all) {
+                elevateUser(ndx.user);
               }
               return ndx.database.select(tableName, req.body, function(items, total) {
                 return res.json({

@@ -14,6 +14,11 @@ module.exports = (ndx) ->
           if truth = hasDeleted obj[key]
             return true
     truth
+  elevateUser = (user) ->
+    user.type = 'system'
+    user.role = 'system'
+    user.roles =
+      system: true
   ndx.rest =
     on: (name, callback) ->
       callbacks[name].push callback
@@ -121,10 +126,7 @@ module.exports = (ndx) ->
             if ndx.settings.SOFT_DELETE and not hasDeleted(where)
               where.deleted = null
             if all
-              ndx.user.type = 'system'
-              ndx.user.role = 'system'
-              ndx.user.roles =
-                system: true
+              elevateUser ndx.user
             ndx.database.select tableName, 
               where: where
             , (items) ->
@@ -136,6 +138,8 @@ module.exports = (ndx) ->
             req.body.where = req.body.where or {}
             if ndx.settings.SOFT_DELETE and not hasDeleted(req.body.where)
               req.body.where.deleted = null
+            if req.body.all or all
+              elevateUser ndx.user
             ndx.database.select tableName, req.body, (items, total) ->
               res.json
                 total: total
