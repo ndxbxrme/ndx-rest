@@ -123,7 +123,7 @@ module.exports = (ndx) ->
               where = JSON.parse req.params.id
             else
               where[ndx.settings.AUTO_ID] = req.params.id
-            if ndx.settings.SOFT_DELETE and not hasDeleted(where)
+            if ndx.settings.SOFT_DELETE and not req.body.showDeleted and not hasDeleted(where)
               where.deleted = null
             if all
               elevateUser ndx.user
@@ -136,7 +136,7 @@ module.exports = (ndx) ->
                 res.json {}
           else
             req.body.where = req.body.where or {}
-            if ndx.settings.SOFT_DELETE and not hasDeleted(req.body.where)
+            if ndx.settings.SOFT_DELETE and not req.body.showDeleted and not hasDeleted(req.body.where)
               req.body.where.deleted = null
             if req.body.all or all
               elevateUser ndx.user

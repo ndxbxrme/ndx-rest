@@ -178,7 +178,7 @@
               } else {
                 where[ndx.settings.AUTO_ID] = req.params.id;
               }
-              if (ndx.settings.SOFT_DELETE && !hasDeleted(where)) {
+              if (ndx.settings.SOFT_DELETE && !req.body.showDeleted && !hasDeleted(where)) {
                 where.deleted = null;
               }
               if (all) {
@@ -195,7 +195,7 @@
               });
             } else {
               req.body.where = req.body.where || {};
-              if (ndx.settings.SOFT_DELETE && !hasDeleted(req.body.where)) {
+              if (ndx.settings.SOFT_DELETE && !req.body.showDeleted && !hasDeleted(req.body.where)) {
                 req.body.where.deleted = null;
               }
               if (req.body.all || all) {
