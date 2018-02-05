@@ -168,10 +168,17 @@ module.exports = (ndx) ->
             else
               ndx.database.delete tableName, where
           res.end 'OK'
+      modifiedFn = (tableName) ->
+        (req, res, next) ->
+          ndx.database.maxModified tableName, (maxModified) ->
+            res.json
+              maxModified: maxModified
       makeRoutes = (tableName, auth) ->
         ndx.app.get ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), selectFn(tableName)
         ndx.app.get "/api/#{tableName}/:id/all", ndx.authenticate(auth), selectFn(tableName, true)
         ndx.app.post "/api/#{tableName}/search", ndx.authenticate(auth), selectFn(tableName)
+        ndx.app.post "/api/#{tableName}/search/all", ndx.authenticate(auth), selectFn(tableName, true)
+        ndx.app.post "/api/#{tableName}/modified", ndx.authenticate(auth), modifiedFn(tableName)
         ndx.app.post ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), upsertFn(tableName)
         ndx.app.put ["/api/#{tableName}", "/api/#{tableName}/:id"], ndx.authenticate(auth), upsertFn(tableName)
         ndx.app.delete "/api/#{tableName}/:id", ndx.authenticate(auth), deleteFn(tableName)

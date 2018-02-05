@@ -66,7 +66,7 @@
       }
     };
     return setImmediate(function() {
-      var auth, deleteFn, endpoints, i, len, makeRoutes, ref, restSockets, results, selectFn, table, tableName, type, upsertFn;
+      var auth, deleteFn, endpoints, i, len, makeRoutes, modifiedFn, ref, restSockets, results, selectFn, table, tableName, type, upsertFn;
       endpoints = ndx.rest.tables || ndx.settings.REST_TABLES || ndx.settings.TABLES;
       if (ndx.socket && ndx.database) {
         restSockets = [];
@@ -245,10 +245,21 @@
             return res.end('OK');
           };
         };
+        modifiedFn = function(tableName) {
+          return function(req, res, next) {
+            return ndx.database.maxModified(tableName, function(maxModified) {
+              return res.json({
+                maxModified: maxModified
+              });
+            });
+          };
+        };
         makeRoutes = function(tableName, auth) {
           ndx.app.get(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), selectFn(tableName));
           ndx.app.get("/api/" + tableName + "/:id/all", ndx.authenticate(auth), selectFn(tableName, true));
           ndx.app.post("/api/" + tableName + "/search", ndx.authenticate(auth), selectFn(tableName));
+          ndx.app.post("/api/" + tableName + "/search/all", ndx.authenticate(auth), selectFn(tableName, true));
+          ndx.app.post("/api/" + tableName + "/modified", ndx.authenticate(auth), modifiedFn(tableName));
           ndx.app.post(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), upsertFn(tableName));
           ndx.app.put(["/api/" + tableName, "/api/" + tableName + "/:id"], ndx.authenticate(auth), upsertFn(tableName));
           return ndx.app["delete"]("/api/" + tableName + "/:id", ndx.authenticate(auth), deleteFn(tableName));
