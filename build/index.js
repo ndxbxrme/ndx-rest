@@ -81,7 +81,7 @@
     };
     transformItems = function(items, user, table, all) {
       var i, item, len, results, transform;
-      transform = ndx.rest.selectTransform(user, table, ndx.rest.transforms);
+      transform = ndx.rest.selectTransform(user, table, all, ndx.rest.transforms);
       if (transform) {
         results = [];
         for (i = 0, len = items.length; i < len; i++) {

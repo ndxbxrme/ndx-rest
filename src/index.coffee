@@ -55,7 +55,7 @@ module.exports = (ndx) ->
     else
       item
   transformItems = (items, user, table, all) ->
-    transform = ndx.rest.selectTransform user, table, ndx.rest.transforms
+    transform = ndx.rest.selectTransform user, table, all, ndx.rest.transforms
     if transform
       for item in items
         item = transformItem item, user, table, all, transform
