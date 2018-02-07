@@ -41,7 +41,7 @@
         callbacks[name].splice(callbacks[name].indexOf(callback), 1);
         return this;
       },
-      selectTransform: function(user, table, transforms) {
+      selectTransform: function(user, table, all, transforms) {
         return null;
       },
       transforms: {}
@@ -71,23 +71,22 @@
         return typeof cb === "function" ? cb(true) : void 0;
       }
     };
-    transformItem = function(user, table, item, transform) {
-      transform = transform || ndx.rest.selectTransform(user, table, ndx.rest.transforms);
+    transformItem = function(item, user, table, all, transform) {
+      transform = transform || ndx.rest.selectTransform(user, table, all, ndx.rest.transforms);
       if (transform) {
         return objtrans(item, transform);
       } else {
         return item;
       }
     };
-    transformItems = function(user, table, items) {
+    transformItems = function(items, user, table, all) {
       var i, item, len, results, transform;
-      console.log('transform');
       transform = ndx.rest.selectTransform(user, table, ndx.rest.transforms);
       if (transform) {
         results = [];
         for (i = 0, len = items.length; i < len; i++) {
           item = items[i];
-          results.push(item = transformItem(user, table, item, transform));
+          results.push(item = transformItem(item, user, table, all, transform));
         }
         return results;
       } else {
@@ -199,7 +198,8 @@
         }
         selectFn = function(tableName, all) {
           return function(req, res, next) {
-            var where;
+            var myuser, where;
+            myuser = JSON.parse(JSON.stringify(ndx.user));
             if (req.params && req.params.id) {
               where = {};
               if (req.params.id.indexOf('{') === 0) {
@@ -217,7 +217,7 @@
                 where: where
               }, function(items) {
                 if (items && items.length) {
-                  return res.json(transformItem(items[0]));
+                  return res.json(transformItem(items[0], myuser, tableName, all));
                 } else {
                   return res.json({});
                 }
@@ -235,7 +235,7 @@
                   total: total,
                   page: req.body.page || 1,
                   pageSize: req.body.pageSize || 0,
-                  items: transformItems(items)
+                  items: transformItems(items, myuser, tableName, all)
                 });
               });
             }

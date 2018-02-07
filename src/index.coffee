@@ -27,7 +27,7 @@ module.exports = (ndx) ->
     off: (name, callback) ->
       callbacks[name].splice callbacks[name].indexOf(callback), 1
       @
-    selectTransform: (user, table, transforms) ->
+    selectTransform: (user, table, all, transforms) ->
       null
     transforms: {}
   callbacks =
@@ -48,18 +48,17 @@ module.exports = (ndx) ->
         cb? truth
     else
       cb? true
-  transformItem = (user, table, item, transform) ->
-    transform = transform or ndx.rest.selectTransform(user, table, ndx.rest.transforms)
+  transformItem = (item, user, table, all, transform) ->
+    transform = transform or ndx.rest.selectTransform(user, table, all, ndx.rest.transforms)
     if transform
       objtrans item, transform
     else
       item
-  transformItems = (user, table, items) ->
-    console.log 'transform'
+  transformItems = (items, user, table, all) ->
     transform = ndx.rest.selectTransform user, table, ndx.rest.transforms
     if transform
       for item in items
-        item = transformItem user, table, item, transform
+        item = transformItem item, user, table, all, transform
     else 
       items
   setImmediate ->
@@ -135,6 +134,7 @@ module.exports = (ndx) ->
         auth = table[1]
       selectFn = (tableName, all) ->
         (req, res, next) ->
+          myuser = JSON.parse JSON.stringify ndx.user
           if req.params and req.params.id
             where = {}
             if req.params.id.indexOf('{') is 0
@@ -149,7 +149,7 @@ module.exports = (ndx) ->
               where: where
             , (items) ->
               if items and items.length
-                res.json transformItem items[0]
+                res.json transformItem items[0], myuser, tableName, all
               else
                 res.json {}
           else
@@ -163,7 +163,7 @@ module.exports = (ndx) ->
                 total: total
                 page: req.body.page or 1
                 pageSize: req.body.pageSize or 0
-                items: transformItems items
+                items: transformItems items, myuser, tableName, all
       upsertFn = (tableName) ->
         (req, res, next) ->
           op = if req.params.id then 'update' else 'insert'
