@@ -1,6 +1,7 @@
 'use strict'
 
 async = require 'async'
+objtrans = require 'objtrans'
 
 module.exports = (ndx) ->
   ndx.settings.SOFT_DELETE = ndx.settings.SOFT_DELETE or process.env.SOFT_DELETE
@@ -26,6 +27,9 @@ module.exports = (ndx) ->
     off: (name, callback) ->
       callbacks[name].splice callbacks[name].indexOf(callback), 1
       @
+    selectTransform: (user, table, transforms) ->
+      null
+    transforms: {}
   callbacks =
     update: []
     insert: []
@@ -44,6 +48,20 @@ module.exports = (ndx) ->
         cb? truth
     else
       cb? true
+  transformItem = (user, table, item, transform) ->
+    transform = transform or ndx.rest.selectTransform(user, table, ndx.rest.transforms)
+    if transform
+      objtrans item, transform
+    else
+      item
+  transformItems = (user, table, items) ->
+    console.log 'transform'
+    transform = ndx.rest.selectTransform user, table, ndx.rest.transforms
+    if transform
+      for item in items
+        item = transformItem user, table, item, transform
+    else 
+      items
   setImmediate ->
     endpoints = ndx.rest.tables or ndx.settings.REST_TABLES or ndx.settings.TABLES
     if ndx.socket and ndx.database
@@ -131,7 +149,7 @@ module.exports = (ndx) ->
               where: where
             , (items) ->
               if items and items.length
-                res.json items[0]
+                res.json transformItem items[0]
               else
                 res.json {}
           else
@@ -145,7 +163,7 @@ module.exports = (ndx) ->
                 total: total
                 page: req.body.page or 1
                 pageSize: req.body.pageSize or 0
-                items: items
+                items: transformItems items
       upsertFn = (tableName) ->
         (req, res, next) ->
           op = if req.params.id then 'update' else 'insert'

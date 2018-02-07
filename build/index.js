@@ -1,11 +1,13 @@
 (function() {
   'use strict';
-  var async;
+  var async, objtrans;
 
   async = require('async');
 
+  objtrans = require('objtrans');
+
   module.exports = function(ndx) {
-    var asyncCallback, callbacks, elevateUser, hasDeleted;
+    var asyncCallback, callbacks, elevateUser, hasDeleted, transformItem, transformItems;
     ndx.settings.SOFT_DELETE = ndx.settings.SOFT_DELETE || process.env.SOFT_DELETE;
     hasDeleted = function(obj) {
       var key, truth;
@@ -38,7 +40,11 @@
       off: function(name, callback) {
         callbacks[name].splice(callbacks[name].indexOf(callback), 1);
         return this;
-      }
+      },
+      selectTransform: function(user, table, transforms) {
+        return null;
+      },
+      transforms: {}
     };
     callbacks = {
       update: [],
@@ -63,6 +69,29 @@
         });
       } else {
         return typeof cb === "function" ? cb(true) : void 0;
+      }
+    };
+    transformItem = function(user, table, item, transform) {
+      transform = transform || ndx.rest.selectTransform(user, table, ndx.rest.transforms);
+      if (transform) {
+        return objtrans(item, transform);
+      } else {
+        return item;
+      }
+    };
+    transformItems = function(user, table, items) {
+      var i, item, len, results, transform;
+      console.log('transform');
+      transform = ndx.rest.selectTransform(user, table, ndx.rest.transforms);
+      if (transform) {
+        results = [];
+        for (i = 0, len = items.length; i < len; i++) {
+          item = items[i];
+          results.push(item = transformItem(user, table, item, transform));
+        }
+        return results;
+      } else {
+        return items;
       }
     };
     return setImmediate(function() {
@@ -188,7 +217,7 @@
                 where: where
               }, function(items) {
                 if (items && items.length) {
-                  return res.json(items[0]);
+                  return res.json(transformItem(items[0]));
                 } else {
                   return res.json({});
                 }
@@ -206,7 +235,7 @@
                   total: total,
                   page: req.body.page || 1,
                   pageSize: req.body.pageSize || 0,
-                  items: items
+                  items: transformItems(items)
                 });
               });
             }
