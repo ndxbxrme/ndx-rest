@@ -63,6 +63,12 @@ module.exports = (ndx) ->
       items
   setImmediate ->
     endpoints = ndx.rest.tables or ndx.settings.REST_TABLES or ndx.settings.TABLES
+    if ndx.rest.restrict
+      for restrict of ndx.rest.restrict
+        switch Object.prototype.toString.call(ndx.rest.restrict[restrict])
+          when '[object Boolean]'
+            if ndx.rest.restrict[restrict]
+              endpoints.splice(endpoints.indexOf(restrict), 1)
     if ndx.socket and ndx.database
       restSockets = []
       ndx.socket.on 'connection', (socket) ->
@@ -123,7 +129,8 @@ module.exports = (ndx) ->
       res.json 
         autoId: ndx.settings.AUTO_ID
         endpoints: endpoints
-    for table in ndx.rest.tables or ndx.settings.REST_TABLES or ndx.settings.TABLES
+        restrict: ndx.rest.restrict
+    for table in endpoints
       type = Object.prototype.toString.call table
       tableName = ''
       auth = null
@@ -132,8 +139,16 @@ module.exports = (ndx) ->
       else if type is '[object Array]'
         tableName = table[0]
         auth = table[1]
+      if ndx.rest.restrict and ndx.rest.restrict[tableName] and Object.prototype.toString.call(ndx.rest.restrict[tableName]) is '[object Boolean]'
+        continue
+      hasAll = true
+      if ndx.rest.restrict and ndx.rest.restrict[tableName] and ndx.rest.restrict[tableName].all
+        if ndx.rest.restrict[tableName] isnt 'server'
+          hasAll = false
       selectFn = (tableName, all) ->
         (req, res, next) ->
+          if all and not hasAll
+            return res.status(401).end 'Restricted'
           myuser = JSON.parse JSON.stringify ndx.user
           if req.params and req.params.id
             where = {}

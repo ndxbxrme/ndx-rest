@@ -94,8 +94,18 @@
       }
     };
     return setImmediate(function() {
-      var auth, deleteFn, endpoints, i, len, makeRoutes, modifiedFn, ref, restSockets, results, selectFn, table, tableName, type, upsertFn;
+      var auth, deleteFn, endpoints, hasAll, i, len, makeRoutes, modifiedFn, restSockets, restrict, results, selectFn, table, tableName, type, upsertFn;
       endpoints = ndx.rest.tables || ndx.settings.REST_TABLES || ndx.settings.TABLES;
+      if (ndx.rest.restrict) {
+        for (restrict in ndx.rest.restrict) {
+          switch (Object.prototype.toString.call(ndx.rest.restrict[restrict])) {
+            case '[object Boolean]':
+              if (ndx.rest.restrict[restrict]) {
+                endpoints.splice(endpoints.indexOf(restrict), 1);
+              }
+          }
+        }
+      }
       if (ndx.socket && ndx.database) {
         restSockets = [];
         ndx.socket.on('connection', function(socket) {
@@ -180,13 +190,13 @@
         }
         return res.json({
           autoId: ndx.settings.AUTO_ID,
-          endpoints: endpoints
+          endpoints: endpoints,
+          restrict: ndx.rest.restrict
         });
       });
-      ref = ndx.rest.tables || ndx.settings.REST_TABLES || ndx.settings.TABLES;
       results = [];
-      for (i = 0, len = ref.length; i < len; i++) {
-        table = ref[i];
+      for (i = 0, len = endpoints.length; i < len; i++) {
+        table = endpoints[i];
         type = Object.prototype.toString.call(table);
         tableName = '';
         auth = null;
@@ -196,9 +206,21 @@
           tableName = table[0];
           auth = table[1];
         }
+        if (ndx.rest.restrict && ndx.rest.restrict[tableName] && Object.prototype.toString.call(ndx.rest.restrict[tableName]) === '[object Boolean]') {
+          continue;
+        }
+        hasAll = true;
+        if (ndx.rest.restrict && ndx.rest.restrict[tableName] && ndx.rest.restrict[tableName].all) {
+          if (ndx.rest.restrict[tableName] !== 'server') {
+            hasAll = false;
+          }
+        }
         selectFn = function(tableName, all) {
           return function(req, res, next) {
             var myuser, where;
+            if (all && !hasAll) {
+              return res.status(401).end('Restricted');
+            }
             myuser = JSON.parse(JSON.stringify(ndx.user));
             if (req.params && req.params.id) {
               where = {};
