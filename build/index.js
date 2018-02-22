@@ -94,7 +94,7 @@
       }
     };
     return setImmediate(function() {
-      var auth, deleteFn, endpoints, hasAll, i, len, makeRoutes, modifiedFn, restSockets, restrict, results, selectFn, table, tableName, type, upsertFn;
+      var auth, deleteFn, endpoints, i, len, makeRoutes, modifiedFn, restSockets, restrict, results, selectFn, table, tableName, type, upsertFn;
       endpoints = ndx.rest.tables || ndx.settings.REST_TABLES || ndx.settings.TABLES;
       if (ndx.rest.restrict) {
         for (restrict in ndx.rest.restrict) {
@@ -191,7 +191,8 @@
         return res.json({
           autoId: ndx.settings.AUTO_ID,
           endpoints: endpoints,
-          restrict: ndx.rest.restrict
+          restrict: ndx.rest.restrict,
+          server: ndx.maintenanceMode ? 'maintenance' : void 0
         });
       });
       results = [];
@@ -206,22 +207,49 @@
           tableName = table[0];
           auth = table[1];
         }
-        if (ndx.rest.restrict && ndx.rest.restrict[tableName] && Object.prototype.toString.call(ndx.rest.restrict[tableName]) === '[object Boolean]') {
-          continue;
-        }
-        hasAll = true;
-        if (ndx.rest.restrict && ndx.rest.restrict[tableName] && ndx.rest.restrict[tableName].all) {
-          if (ndx.rest.restrict[tableName] !== 'server') {
-            hasAll = false;
-          }
-        }
+
+        /*
+        if ndx.rest.restrict and ndx.rest.restrict[tableName] and Object.prototype.toString.call(ndx.rest.restrict[tableName]) is '[object Boolean]'
+          continue
+        hasAll = true
+        if ndx.rest.restrict and ndx.rest.restrict[tableName] and ndx.rest.restrict[tableName].all
+          if ndx.rest.restrict[tableName] isnt 'server'
+            hasAll = false
+         */
         selectFn = function(tableName, all) {
           return function(req, res, next) {
-            var myuser, where;
-            if (all && !hasAll) {
-              return res.status(401).end('Restricted');
-            }
+
+            /*
+            if all and not hasAll
+              return res.status(401).end 'Restricted'
+             */
+            var key, myuser, role, tableRestrict, where;
             myuser = JSON.parse(JSON.stringify(ndx.user));
+            role = null;
+            for (key in myuser.roles) {
+              if (myuser.roles[key]) {
+                role = key;
+                break;
+              }
+            }
+            role = role || 'default';
+            restrict = null;
+            if (ndx.rest.restrict) {
+              tableRestrict = ndx.rest.restrict[tableName] || ndx.rest.restrict["default"];
+              if (tableRestrict) {
+                restrict = tableRestrict[role] || tableRestrict["default"];
+              }
+            }
+            if (restrict) {
+              if (all && restrict.all) {
+                return res.json({
+                  total: 0,
+                  page: 1,
+                  pageSize: 0,
+                  items: []
+                });
+              }
+            }
             if (req.params && req.params.id) {
               where = {};
               if (req.params.id.indexOf('{') === 0) {

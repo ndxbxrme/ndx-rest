@@ -130,6 +130,7 @@ module.exports = (ndx) ->
         autoId: ndx.settings.AUTO_ID
         endpoints: endpoints
         restrict: ndx.rest.restrict
+        server: if ndx.maintenanceMode then 'maintenance' else undefined
     for table in endpoints
       type = Object.prototype.toString.call table
       tableName = ''
@@ -139,17 +140,40 @@ module.exports = (ndx) ->
       else if type is '[object Array]'
         tableName = table[0]
         auth = table[1]
+      ###
       if ndx.rest.restrict and ndx.rest.restrict[tableName] and Object.prototype.toString.call(ndx.rest.restrict[tableName]) is '[object Boolean]'
         continue
       hasAll = true
       if ndx.rest.restrict and ndx.rest.restrict[tableName] and ndx.rest.restrict[tableName].all
         if ndx.rest.restrict[tableName] isnt 'server'
           hasAll = false
+      ###
       selectFn = (tableName, all) ->
         (req, res, next) ->
+          ###
           if all and not hasAll
             return res.status(401).end 'Restricted'
+          ###
           myuser = JSON.parse JSON.stringify ndx.user
+          role = null
+          for key of myuser.roles
+            if myuser.roles[key]
+              role = key
+              break
+          role = role or 'default'
+          restrict = null
+          if ndx.rest.restrict
+            tableRestrict = ndx.rest.restrict[tableName] or ndx.rest.restrict.default
+            if tableRestrict
+              restrict = tableRestrict[role] or tableRestrict.default
+          if restrict
+            if all and restrict.all
+              return res.json
+                total: 0
+                page: 1
+                pageSize: 0
+                items: []
+            
           if req.params and req.params.id
             where = {}
             if req.params.id.indexOf('{') is 0
