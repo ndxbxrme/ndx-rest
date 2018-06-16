@@ -94,7 +94,7 @@
       }
     };
     return setImmediate(function() {
-      var auth, deleteFn, endpoints, i, len, makeRoutes, modifiedFn, restSockets, restrict, results, selectFn, table, tableName, type, upsertFn;
+      var auth, deleteFn, endpoints, i, len, makeRoutes, modifiedFn, restrict, results, selectFn, table, tableName, type, upsertFn;
       endpoints = ndx.rest.tables || ndx.settings.REST_TABLES || ndx.settings.TABLES;
       if (ndx.rest.restrict) {
         for (restrict in ndx.rest.restrict) {
@@ -107,75 +107,21 @@
         }
       }
       if (ndx.socket && ndx.database) {
-        restSockets = [];
-        ndx.socket.on('connection', function(socket) {
-          socket.on('rest', function(data) {
-            if (restSockets.indexOf(socket) === -1) {
-              socket.rest = true;
-              return restSockets.push(socket);
-            }
-          });
-          return socket.on('user', function(data) {
-            socket.user = data;
-            return ndx.auth && ndx.auth.extendUser(socket.user);
-          });
-        });
-        ndx.socket.on('disconnect', function(socket) {
-          if (socket.rest) {
-            return restSockets.splice(restSockets.indexOf(socket), 1);
-          }
-        });
         ndx.database.on('update', function(args, cb) {
           if (endpoints.indexOf(args.table) !== -1) {
-            async.each(restSockets, function(restSocket, callback) {
-              args.user = restSocket.user;
-              return asyncCallback('update', args, function(result) {
-                if (!result) {
-                  return callback();
-                }
-                restSocket.emit('update', {
-                  table: args.table,
-                  id: args.id
-                });
-                return callback();
-              });
-            });
+            ndx.socket.dbFn(args);
             return cb();
           }
         });
         ndx.database.on('insert', function(args, cb) {
           if (endpoints.indexOf(args.table) !== -1) {
-            async.each(restSockets, function(restSocket, callback) {
-              args.user = restSocket.user;
-              return asyncCallback('insert', args, function(result) {
-                if (!result) {
-                  return callback();
-                }
-                restSocket.emit('insert', {
-                  table: args.table,
-                  id: args.id
-                });
-                return callback();
-              });
-            });
+            ndx.socket.dbFn(args);
             return cb();
           }
         });
         ndx.database.on('delete', function(args, cb) {
           if (endpoints.indexOf(args.table) !== -1) {
-            async.each(restSockets, function(restSocket, callback) {
-              args.user = restSocket.user;
-              return asyncCallback('delete', args, function(result) {
-                if (!result) {
-                  return callback();
-                }
-                restSocket.emit('delete', {
-                  table: args.table,
-                  id: args.id
-                });
-                return callback();
-              });
-            });
+            ndx.socket.dbFn(args);
             return cb();
           }
         });

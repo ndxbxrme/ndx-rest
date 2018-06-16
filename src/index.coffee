@@ -70,56 +70,17 @@ module.exports = (ndx) ->
             if ndx.rest.restrict[restrict]
               endpoints.splice(endpoints.indexOf(restrict), 1)
     if ndx.socket and ndx.database
-      restSockets = []
-      ndx.socket.on 'connection', (socket) ->
-        socket.on 'rest', (data) ->
-          if restSockets.indexOf(socket) is -1
-            socket.rest = true
-            restSockets.push socket
-        socket.on 'user', (data) ->
-          socket.user = data
-          ndx.auth and ndx.auth.extendUser socket.user
-      ndx.socket.on 'disconnect', (socket) ->
-        if socket.rest
-          restSockets.splice restSockets.indexOf(socket), 1
       ndx.database.on 'update', (args, cb) ->
         if endpoints.indexOf(args.table) isnt -1
-          async.each restSockets, (restSocket, callback) ->
-            args.user = restSocket.user
-            asyncCallback 'update', args
-            , (result) ->
-              if not result
-                return callback()
-              restSocket.emit 'update', 
-                table: args.table
-                id: args.id
-              callback()
+          ndx.socket.dbFn args
           cb()
       ndx.database.on 'insert', (args, cb) ->
         if endpoints.indexOf(args.table) isnt -1
-          async.each restSockets, (restSocket, callback) ->
-            args.user = restSocket.user
-            asyncCallback 'insert', args
-            , (result) ->
-              if not result
-                return callback()
-              restSocket.emit 'insert', 
-                table: args.table
-                id: args.id
-              callback()
+          ndx.socket.dbFn args
           cb()
       ndx.database.on 'delete', (args, cb) ->
         if endpoints.indexOf(args.table) isnt -1
-          async.each restSockets, (restSocket, callback) ->
-            args.user = restSocket.user
-            asyncCallback 'delete', args
-            , (result) ->
-              if not result
-                return callback()
-              restSocket.emit 'delete', 
-                table: args.table
-                id: args.id
-              callback()
+          ndx.socket.dbFn args
           cb()
     
     ndx.app.get '/rest/endpoints', (req, res, next) ->
